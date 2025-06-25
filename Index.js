@@ -9,23 +9,15 @@ const app = express();
 const upload = multer({ dest: 'uploads/' });
 const PORT = process.env.PORT || 3000;
 
-// Página HTML com botão de upload
-app.get('/', (req, res) => {
-  res.send(`
-    <html>
-    <head><title>Upload para GitHub</title></head>
-    <body style="font-family: Fira Code; text-align: center; margin-top: 50px;">
-      <h2>Enviar mídia para o GitHub</h2>
-      <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="arquivo" required><br><br>
-        <button type="submit">Enviar</button>
-      </form>
-    </body>
-    </html>
-  `);
+// Serve arquivos estáticos da pasta public/
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Rota para a página HTML
+app.get('/pagina', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Rota para receber e enviar pro GitHub
+// Upload e envio para GitHub
 app.post('/upload', upload.single('arquivo'), async (req, res) => {
   const file = req.file;
   if (!file) return res.send('Nenhum arquivo enviado.');
@@ -35,7 +27,7 @@ app.post('/upload', upload.single('arquivo'), async (req, res) => {
   const filePathGitHub = `uploads/${Date.now()}_${fileName}`;
 
   try {
-    const response = await axios.put(
+    await axios.put(
       `https://api.github.com/repos/${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}/contents/${filePathGitHub}`,
       {
         message: `upload: ${fileName}`,
@@ -59,10 +51,10 @@ app.post('/upload', upload.single('arquivo'), async (req, res) => {
     console.error(err.response?.data || err);
     res.send('Erro ao enviar para o GitHub.');
   } finally {
-    fs.unlinkSync(file.path); // Remove o arquivo local temporário
+    fs.unlinkSync(file.path); // remove temporário
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}/pagina`);
 });
